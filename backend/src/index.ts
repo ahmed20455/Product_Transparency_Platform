@@ -63,6 +63,34 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// NEW: API to add a new product
+app.post('/api/products', async (req, res) => {
+  const { name, description } = req.body; // Expecting name and description in the request body
+
+  // Basic validation (can be expanded later)
+  if (!name) {
+    return res.status(400).json({ error: 'Product name is required.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .insert({ name, description }) // Supabase automatically handles 'id' and 'created_at' defaults
+      .select(); // Use .select() to return the inserted data
+
+    if (error) {
+      console.error('Error inserting product into Supabase:', error);
+      return res.status(500).json({ error: 'Failed to add product.' });
+    }
+
+    // Supabase insert typically returns an array of inserted rows
+    res.status(201).json(data ? data[0] : {}); // Respond with the first inserted product object
+  } catch (err: any) {
+    console.error('Unexpected error adding product:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });
