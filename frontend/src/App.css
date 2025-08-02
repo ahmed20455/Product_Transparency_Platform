@@ -91,3 +91,39 @@ main .product-grid {
     gap: 20px;
     width: 100%; /* Ensure grid takes full width within main */
 }
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.product-card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card h3 {
+    color: #007bff;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.product-card p {
+    font-size: 0.9em;
+    color: #333;
+    line-height: 1.5;
+    flex-grow: 1; /* Allows the description to fill space */
+}
+
+.product-card button {
+    margin-top: 15px;
+    width: 100%;
+}

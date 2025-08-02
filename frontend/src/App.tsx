@@ -7,17 +7,19 @@ interface Question {
   id: string;
   text: string;
   type: 'text' | 'number' | 'boolean';
-  options?: string[]; // For boolean type questions
+  options?: string[];
 }
 
 interface ProductData {
+  id?: string; // Add id as optional for new products
   name: string;
   description: string;
-  [key: string]: any; // Allow for dynamic question answers
+  created_at?: string; // Add created_at as optional
+  [key: string]: any;
 }
 
 function App() {
-  const [currentStep, setCurrentStep] = useState(0); // Start at 0 for landing page
+  const [currentStep, setCurrentStep] = useState(0);
   const [productData, setProductData] = useState<ProductData>({
     name: '',
     description: '',
@@ -25,11 +27,10 @@ function App() {
   const [dynamicQuestions, setDynamicQuestions] = useState<Question[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [errorFetchingQuestions, setErrorFetchingQuestions] = useState<string | null>(null);
-  const [products, setProducts] = useState<ProductData[]>([]); // New state for product list
+  const [products, setProducts] = useState<ProductData[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [errorFetchingProducts, setErrorFetchingProducts] = useState<string | null>(null);
-  
-  // Function to fetch products for the list view
+
   const fetchProducts = async () => {
     setIsLoadingProducts(true);
     setErrorFetchingProducts(null);
@@ -48,9 +49,8 @@ function App() {
     }
   };
 
-  // Call fetchProducts when entering the product list step
   useEffect(() => {
-    if (currentStep === 4) { // Assuming '4' is our new product list step
+    if (currentStep === 4) {
       fetchProducts();
     }
   }, [currentStep]);
@@ -65,13 +65,11 @@ function App() {
   };
 
   const handleNext = async () => {
-    // Validation for Step 1
     if (currentStep === 1) {
-      if (!productData.name.trim()) {
-        alert('Product Name is required!');
+      if (!productData.name.trim() || !productData.description.trim()) {
+        alert('Product Name and Description are required!');
         return;
       }
-      // Fetch dynamic questions after basic info is provided
       setIsLoadingQuestions(true);
       setErrorFetchingQuestions(null);
       try {
@@ -80,7 +78,11 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ product_name: productData.name }),
+          // Now send both product_name and description
+          body: JSON.stringify({
+            product_name: productData.name,
+            description: productData.description
+          }),
         });
 
         if (!response.ok) {
@@ -89,15 +91,13 @@ function App() {
 
         const questions: Question[] = await response.json();
         setDynamicQuestions(questions);
-        // Initialize answers for new questions
         const initialDynamicAnswers: { [key: string]: any } = {};
         questions.forEach(q => {
-          // Set default values based on type, e.g., empty string for text, false for boolean
-          initialDynamicAnswers[q.id] = q.type === 'boolean' ? 'No' : ''; // Default to 'No' for boolean as per Figma options
+          initialDynamicAnswers[q.id] = q.type === 'boolean' ? 'No' : '';
         });
         setProductData(prevData => ({ ...prevData, ...initialDynamicAnswers }));
 
-        setCurrentStep(prevStep => prevStep + 1); // Move to next step only after questions are fetched
+        setCurrentStep(prevStep => prevStep + 1);
       } catch (error: any) {
         console.error('Error fetching dynamic questions:', error);
         setErrorFetchingQuestions('Failed to load dynamic questions. Please try again.');
@@ -128,21 +128,19 @@ function App() {
       const result = await response.json();
       console.log('Product submitted successfully:', result);
       alert('Product submitted successfully!');
-      // Reset form
       setProductData({ name: '', description: '' });
       setDynamicQuestions([]);
-      setCurrentStep(4); // Go back to product list step
+      setCurrentStep(4);
     } catch (error: any) {
       console.error('Error submitting product:', error.message);
       alert(`Error: ${error.message}`);
     }
   };
 
-  // New function to handle report download
   const handleDownloadReport = (productId: string) => {
-    // This will trigger the download directly in the browser
     window.open(`http://localhost:5000/api/products/${productId}/report`, '_blank');
   };
+
   const renderDynamicQuestions = () => {
     if (isLoadingQuestions) {
       return <p>Loading dynamic questions...</p>;
@@ -150,7 +148,7 @@ function App() {
     if (errorFetchingQuestions) {
       return <p style={{ color: 'red' }}>{errorFetchingQuestions}</p>;
     }
-    if (dynamicQuestions.length === 0 && currentStep > 1) { // Only show message if past step 1 and no questions
+    if (dynamicQuestions.length === 0 && currentStep > 1) {
       return <p>No specific follow-up questions for this product. Click Next to proceed.</p>;
     }
 
@@ -181,7 +179,7 @@ function App() {
               <select
                 id={q.id}
                 name={q.id}
-                value={productData[q.id] || 'No'} // Default to 'No' if not set
+                value={productData[q.id] || 'No'}
                 onChange={(e) => handleDynamicQuestionChange(q.id, e.target.value)}
               >
                 {q.options.map(option => (
@@ -197,7 +195,7 @@ function App() {
 
   const renderStep = () => {
     switch (currentStep) {
-      case 0: // Landing Page
+      case 0:
         return (
           <div>
             <h2>Welcome to the Product Transparency Platform</h2>
@@ -205,7 +203,7 @@ function App() {
             <button onClick={() => setCurrentStep(4)} style={{ marginLeft: '10px' }}>View All Products</button>
           </div>
         );
-      case 1: // Basic Info
+      case 1:
         return (
           <div>
             <h2>Add Product - Step 1/3: Basic Info</h2>
@@ -233,9 +231,10 @@ function App() {
             <button onClick={handleNext} disabled={isLoadingQuestions}>
               {isLoadingQuestions ? 'Loading...' : 'Next'}
             </button>
+            <button onClick={() => setCurrentStep(0)} style={{ marginLeft: '10px' }}>Back to Home</button>
           </div>
         );
-      case 2: // Dynamic Questions - Part 1
+      case 2:
         return (
           <div>
             <h2>Add Product - Step 2/3: Product Details</h2>
@@ -244,27 +243,27 @@ function App() {
             <button onClick={handleNext}>Next</button>
           </div>
         );
-      case 3: // Review / Finalize Step
-            return (
-                <div>
-                    <h2>Add Product - Step 3/3: Review & Submit</h2>
-                    <p>Please review the collected product information before final submission.</p>
-                    <div style={{ textAlign: 'left', border: '1px solid #eee', padding: '1em', borderRadius: '5px', backgroundColor: '#fff', marginBottom: '1em' }}>
-                        <h3>Product Summary:</h3>
-                        {Object.entries(productData).map(([key, value]) => (
-                            <p key={key}>
-                                <strong>{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}:</strong> {
-                                    typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
-                                    value === '' ? 'Not provided' : String(value)
-                                }
-                            </p>
-                        ))}
-                    </div>
-                    <button onClick={() => setCurrentStep(prevStep => prevStep - 1)}>Back</button>
-                    <button onClick={handleSubmit}>Submit Product</button>
-                </div>
-            );
-            case 4: // Product List View
+      case 3:
+        return (
+          <div>
+            <h2>Add Product - Step 3/3: Review & Submit</h2>
+            <p>Please review the collected product information before final submission.</p>
+            <div style={{ textAlign: 'left', border: '1px solid #eee', padding: '1em', borderRadius: '5px', backgroundColor: '#fff', marginBottom: '1em' }}>
+                <h3>Product Summary:</h3>
+                {Object.entries(productData).map(([key, value]) => (
+                    <p key={key}>
+                        <strong>{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}:</strong> {
+                            typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
+                            value === '' ? 'Not provided' : String(value)
+                        }
+                    </p>
+                ))}
+            </div>
+            <button onClick={() => setCurrentStep(prevStep => prevStep - 1)}>Back</button>
+            <button onClick={handleSubmit}>Submit Product</button>
+        </div>
+        );
+      case 4:
         return (
           <div>
             <h2>All Submitted Products</h2>
@@ -276,13 +275,13 @@ function App() {
             ) : products.length === 0 ? (
               <p>No products submitted yet. Start a new submission!</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+              <div className="product-grid">
                 {products.map(product => (
-                  <div key={product.id} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <div key={product.id} className="product-card">
                     <h3>{product.name}</h3>
                     <p>{product.description.substring(0, 100)}{product.description.length > 100 ? '...' : ''}</p>
-                    <p style={{ fontSize: '0.8em', color: '#666' }}>Submitted: {new Date(product.created_at).toLocaleDateString()}</p>
-                    <button onClick={() => handleDownloadReport(product.id)}>Download Report</button>
+                    <p style={{ fontSize: '0.8em', color: '#666' }}>Submitted: {new Date(product.created_at || '').toLocaleDateString()}</p>
+                    <button onClick={() => product.id && handleDownloadReport(product.id)}>Download Report</button>
                   </div>
                 ))}
               </div>
