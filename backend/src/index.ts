@@ -2,68 +2,75 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { createClient } from '@supabase/supabase-js'; // Import createClient
-import generateProductReport from './reportGenerator'; // Import the new module
-import { createReadStream, existsSync, unlinkSync, mkdirSync } from 'fs'; // For file system operations
-import path from 'path'; // For path manipulation
-
+import { createClient } from '@supabase/supabase-js';
+import generateProductReport from './reportGenerator';
+import { createReadStream, existsSync, unlinkSync, mkdirSync } from 'fs';
+import path from 'path';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Initialize Supabase client for the backend
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
-
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('Supabase URL or Service Key not found in environment variables.');
-  process.exit(1); // Exit if essential env vars are missing
+  process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
-    persistSession: false, // Important for server-side
+    persistSession: false,
   }
 });
 
-// Test Supabase connection (by attempting a simple query)
 async function testSupabaseConnection() {
     try {
-        // Try to fetch something from a table, e.g., 'products'
         const { data, error } = await supabase.from('products').select('id').limit(1);
         if (error) {
             throw error;
         }
         console.log('Successfully connected to Supabase using client library!');
-        // console.log('Test query data:', data); // Uncomment to see data if any
     } catch (err: any) {
         console.error('Supabase connection or test query error:', err.message);
-        // process.exit(1); // Consider exiting if connection is critical
     }
 }
 
-testSupabaseConnection(); // Call the test function
+testSupabaseConnection();
 
 app.use(cors());
 app.use(express.json());
 
-// Ensure a directory for reports exists
-const reportsDir = path.join(__dirname, '../reports'); // 'reports' folder at the root of backend
+const reportsDir = path.join(__dirname, '../reports');
 if (!existsSync(reportsDir)) {
     mkdirSync(reportsDir);
 }
 
-app.get('/', (req, res) => {
-  res.send('Hello from the backend!');
-});
+const upsertQuestions = async (questions: any[]) => {
+    const questionsToUpsert = questions.map(q => ({
+        id: q.id,
+        text: q.text,
+        type: q.type,
+        options: q.options || null,
+    }));
 
-// Basic API to fetch products (updated to use Supabase client)
+    try {
+        const { error } = await supabase.from('questions').upsert(questionsToUpsert);
+        if (error) {
+            console.error('Error upserting questions:', error);
+            throw error;
+        }
+    } catch (e) {
+        console.error('Exception during question upsert:', e);
+        throw e;
+    }
+};
+
 app.get('/api/products', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('products').select('id, name, description, created_at');
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (error) {
       throw error;
     }
@@ -74,63 +81,95 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// NEW: API to add a new product
 app.post('/api/products', async (req, res) => {
-  const { name, description } = req.body; // Expecting name and description in the request body
-
-  // Basic validation (can be expanded later)
-  if (!name) {
-    return res.status(400).json({ error: 'Product name is required.' });
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .insert({ name, description }) // Supabase automatically handles 'id' and 'created_at' defaults
-      .select(); // Use .select() to return the inserted data
-
-    if (error) {
-      console.error('Error inserting product into Supabase:', error);
-      return res.status(500).json({ error: 'Failed to add product.' });
+    const { name, description, questions: dynamicQuestions, ...dynamicAnswers } = req.body;
+  
+    if (!name || !description) {
+      return res.status(400).json({ error: 'Product name and description are required.' });
     }
+  
+    try {
+        if (dynamicQuestions && dynamicQuestions.length > 0) {
+            await upsertQuestions(dynamicQuestions);
+        }
 
-    // Supabase insert typically returns an array of inserted rows
-    res.status(201).json(data ? data[0] : {}); // Respond with the first inserted product object
-  } catch (err: any) {
-    console.error('Unexpected error adding product:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+        const { data: productData, error: productError } = await supabase
+            .from('products')
+            .insert({ name, description })
+            .select();
+  
+        if (productError || !productData || productData.length === 0) {
+            console.error('Error inserting product into Supabase:', productError);
+            return res.status(500).json({ error: 'Failed to add product.' });
+        }
+  
+        const newProductId = productData[0].id;
+        
+        if (Object.keys(dynamicAnswers).length > 0) {
+            const answersToInsert = Object.keys(dynamicAnswers).map(questionId => ({
+                product_id: newProductId,
+                question_id: questionId,
+                value: String(dynamicAnswers[questionId]),
+            }));
+
+            const { error: answersError } = await supabase
+                .from('answers')
+                .insert(answersToInsert);
+
+            if (answersError) {
+                console.error('Error inserting answers into Supabase:', answersError);
+            }
+        }
+  
+        res.status(201).json(productData[0]);
+    } catch (err: any) {
+      console.error('Unexpected error adding product:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 app.get('/api/products/:id/report', async (req, res) => {
   const productId = req.params.id;
 
   try {
-    // 1. Fetch product data from Supabase
-    const { data, error } = await supabase.from('products').select('*').eq('id', productId).single();
+    const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
 
-    if (error || !data) {
-      console.error('Error fetching product for report:', error);
-      return res.status(404).json({ error: 'Product not found.' });
+    if (productError || !product) {
+        console.error('Error fetching product for report:', productError);
+        return res.status(404).json({ error: 'Product not found.' });
     }
 
-    // 2. Generate PDF report
+    const { data: answersWithQuestions, error: answersError } = await supabase
+        .from('answers')
+        .select(`
+            value,
+            questions (id, text, type, options)
+        `)
+        .eq('product_id', productId);
+
+    if (answersError) {
+        console.error('Error fetching answers for report:', answersError);
+        return res.status(500).json({ error: 'Failed to fetch answers for report.' });
+    }
+
     const reportFileName = `transparency_report_${productId}.pdf`;
     const filePath = path.join(reportsDir, reportFileName);
 
-    await generateProductReport(data, filePath); // Use the new report generator
+    await generateProductReport(product, answersWithQuestions, filePath);
 
-    // 3. Send the generated PDF file as a response
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${reportFileName}"`);
 
     const fileStream = createReadStream(filePath);
     fileStream.pipe(res);
 
-    // Optional: Clean up the file after sending
     fileStream.on('close', () => {
       if (existsSync(filePath)) {
-        unlinkSync(filePath); // Delete the temporary PDF
+        unlinkSync(filePath);
       }
     });
 
@@ -139,6 +178,7 @@ app.get('/api/products/:id/report', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate product report.' });
   }
 });
+
 
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);

@@ -8,33 +8,19 @@ interface ProductData {
   name: string;
   description: string;
   created_at: string;
-  [key: string]: any; // For dynamic question answers
+  [key: string]: any;
 }
 
-// Function to format keys from camelCase/snake_case to readable text
-const formatKey = (key: string): string => {
-    if (key === 'id' || key === 'created_at') {
-        return key.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-    // Assuming dynamic question IDs often start with q_
-    if (key.startsWith('q_')) {
-        return key.substring(2).replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-    return key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-};
-
-const generateProductReport = (product: ProductData, filePath: string): Promise<void> => {
+const generateProductReport = (product: ProductData, questionsAndAnswers: any[], filePath: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument();
     const writeStream = createWriteStream(filePath);
 
     doc.pipe(writeStream);
 
-    // Header
     doc.fontSize(25).text('Product Transparency Report', { align: 'center' });
     doc.moveDown();
 
-    // Product Name and Description
     doc.fontSize(18).text(`Product: ${product.name}`);
     doc.fontSize(12).text(`ID: ${product.id}`);
     doc.fontSize(12).text(`Date Submitted: ${new Date(product.created_at).toLocaleDateString()}`);
@@ -45,23 +31,26 @@ const generateProductReport = (product: ProductData, filePath: string): Promise<
     doc.fontSize(16).text('Detailed Information:', { underline: true });
     doc.moveDown(0.5);
 
-    // Dynamic and other details
-    for (const key in product) {
-      // Skip already printed core fields
-      if (['id', 'name', 'description', 'created_at'].includes(key)) {
-        continue;
-      }
+    if (questionsAndAnswers && questionsAndAnswers.length > 0) {
+        questionsAndAnswers.forEach((item) => {
+            if (item.questions && item.questions.text) {
+                const questionText = item.questions.text;
+                const answerValue = item.value;
 
-      let value = product[key];
-      if (typeof value === 'boolean') {
-        value = value ? 'Yes' : 'No';
-      } else if (value === null || value === undefined || value === '') {
-        value = 'Not Provided';
-      } else {
-        value = String(value); // Ensure it's a string
-      }
+                let formattedValue = String(answerValue);
+                if (item.questions.type === 'boolean') {
+                    formattedValue = answerValue === 'Yes' ? 'Yes' : 'No';
+                } else if (answerValue === null || answerValue === undefined || answerValue === '') {
+                    formattedValue = 'Not Provided';
+                }
 
-      doc.fontSize(11).text(`- ${formatKey(key)}: ${value}`);
+                doc.fontSize(11).text(`- ${questionText}: ${formattedValue}`);
+            } else {
+                console.warn(`Warning: Could not find question text for answer with value '${item.value}'.`);
+            }
+        });
+    } else {
+        doc.fontSize(11).text("No detailed follow-up questions were answered for this product.");
     }
 
     doc.moveDown();

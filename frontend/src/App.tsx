@@ -11,10 +11,10 @@ interface Question {
 }
 
 interface ProductData {
-  id?: string; // Add id as optional for new products
+  id?: string;
   name: string;
   description: string;
-  created_at?: string; // Add created_at as optional
+  created_at?: string;
   [key: string]: any;
 }
 
@@ -78,7 +78,6 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          // Now send both product_name and description
           body: JSON.stringify({
             product_name: productData.name,
             description: productData.description
@@ -112,12 +111,24 @@ function App() {
   const handleSubmit = async () => {
     console.log('Submitting Product Data:', productData);
     try {
+      const payload = {
+        name: productData.name,
+        description: productData.description,
+        questions: dynamicQuestions, // Add questions to the payload
+        ...Object.keys(productData)
+            .filter(key => key.startsWith('q_'))
+            .reduce((obj: { [key: string]: any }, key) => {
+                obj[key] = productData[key];
+                return obj;
+            }, {} as { [key: string]: any })
+      };
+
       const response = await fetch('http://localhost:5000/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(productData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

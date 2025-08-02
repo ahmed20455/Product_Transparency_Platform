@@ -8,17 +8,10 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# This is a placeholder for a real API key.
-# In a real app, this would be loaded from an environment variable.
-# For this exercise, we will leave it as an empty string and the canvas environment will provide it.
 API_KEY = "AIzaSyC-LzB_w3xQY2niO245xLX9e63UiSEM3as"
 MODEL_ID = "gemini-2.5-flash"
 
-# Define a function to get questions from the Gemini API
 def get_llm_questions(product_name, description):
-    """
-    Generates a list of questions using the Gemini API.
-    """
     prompt_text = f"""
     You are an expert on product transparency and sustainability. A user is submitting a new product.
     Your task is to generate a list of 5-7 detailed, relevant, and specific follow-up questions
@@ -79,24 +72,17 @@ def get_llm_questions(product_name, description):
         ]
     }
     
-    # We will let the canvas environment handle the API key, so we don't need to specify it here.
     api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent?key={API_KEY}"
     
     try:
         response = requests.post(api_url, headers=headers, data=json.dumps(payload))
-        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        response.raise_for_status()
         response_json = response.json()
 
-        # Handle cases where the response structure is unexpected or content is missing
         if response_json.get('candidates') and len(response_json['candidates']) > 0:
             content_part = response_json['candidates'][0]['content']['parts'][0]['text']
-            
-            # The LLM's response can sometimes be wrapped in markdown.
-            # We need to clean it up to get just the JSON.
             cleaned_json_string = content_part.strip().lstrip('`').lstrip('json').rstrip('`')
             
-            # Now, attempt to parse the cleaned string as JSON.
-            # Add a fallback in case of parsing errors.
             try:
                 llm_response_data = json.loads(cleaned_json_string)
                 if "questions" in llm_response_data:
@@ -128,10 +114,8 @@ def generate_questions():
     if not product_name or not description:
         return jsonify({"error": "Product name and description are required."}), 400
 
-    # Call the LLM to get dynamic questions
     questions = get_llm_questions(product_name, description)
     if not questions:
-        # Fallback to a generic set of questions if LLM call fails
         questions = [
             {"id": "q_main_materials", "text": "What are the main materials used?", "type": "text"},
             {"id": "q_origin", "text": "What is the country of origin for the main components?", "type": "text"},
@@ -142,4 +126,3 @@ def generate_questions():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
-
