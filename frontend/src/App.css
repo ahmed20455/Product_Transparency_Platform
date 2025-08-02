@@ -127,3 +127,30 @@ main .product-grid {
     margin-top: 15px;
     width: 100%;
 }
+
+.score-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  background-color: white;
+  padding: 2em;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  text-align: left;
+}
+
+.score-popup h3 {
+  margin-top: 0;
+  color: #007bff;
+}
+
+.score-popup button {
+  float: right;
+  background-color: #f4f4f4;
+  color: #333;
+  border: 1px solid #ccc;
+}

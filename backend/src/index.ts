@@ -180,6 +180,63 @@ app.get('/api/products/:id/report', async (req, res) => {
 });
 
 
+// NEW: Endpoint to get a transparency score for a product
+app.get('/api/products/:id/score', async (req, res) => {
+    const productId = req.params.id;
+
+    try {
+        const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (productError || !product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        const { data: answersWithQuestions, error: answersError } = await supabase
+            .from('answers')
+            .select(`
+                value,
+                questions (text, type)
+            `)
+            .eq('product_id', productId);
+
+        if (answersError) {
+            return res.status(500).json({ error: 'Failed to fetch answers for scoring.' });
+        }
+        
+        // Prepare data for the AI service call
+        const q_and_a_data = answersWithQuestions?.map(item => ({
+            question_text: item.questions?.[0]?.text,
+            answer_value: item.value
+        })) || [];
+
+        // Call the AI service
+        const aiResponse = await fetch('http://localhost:5001/transparency-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                product_name: product.name,
+                description: product.description,
+                questions_and_answers: q_and_a_data
+            })
+        });
+
+        if (!aiResponse.ok) {
+            throw new Error('AI service failed to provide a score.');
+        }
+
+        const scoreData = await aiResponse.json();
+        res.json(scoreData);
+
+    } catch (err: any) {
+        console.error('Error fetching score:', err.message);
+        res.status(500).json({ error: 'Failed to generate transparency score.' });
+    }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });

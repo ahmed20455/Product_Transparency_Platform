@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Define interfaces for better type safety
 interface Question {
   id: string;
   text: string;
@@ -18,6 +17,11 @@ interface ProductData {
   [key: string]: any;
 }
 
+interface ScoreData {
+  score: number;
+  rationale: string;
+}
+
 function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [productData, setProductData] = useState<ProductData>({
@@ -30,6 +34,9 @@ function App() {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [errorFetchingProducts, setErrorFetchingProducts] = useState<string | null>(null);
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null); // New state for score
+  const [isScoring, setIsScoring] = useState(false);
+
 
   const fetchProducts = async () => {
     setIsLoadingProducts(true);
@@ -114,13 +121,13 @@ function App() {
       const payload = {
         name: productData.name,
         description: productData.description,
-        questions: dynamicQuestions, // Add questions to the payload
+        questions: dynamicQuestions,
         ...Object.keys(productData)
             .filter(key => key.startsWith('q_'))
             .reduce((obj: { [key: string]: any }, key) => {
                 obj[key] = productData[key];
                 return obj;
-            }, {} as { [key: string]: any })
+            }, {})
       };
 
       const response = await fetch('http://localhost:5000/api/products', {
@@ -150,6 +157,24 @@ function App() {
 
   const handleDownloadReport = (productId: string) => {
     window.open(`http://localhost:5000/api/products/${productId}/report`, '_blank');
+  };
+
+  const handleGetScore = async (productId: string) => {
+    setIsScoring(true);
+    setScoreData(null);
+    try {
+      const response = await fetch(`http://localhost:5000/api/products/${productId}/score`);
+      if (!response.ok) {
+        throw new Error('Could not fetch score from backend.');
+      }
+      const data: ScoreData = await response.json();
+      setScoreData(data);
+    } catch (error: any) {
+      console.error('Error fetching score:', error.message);
+      setScoreData({ score: 0, rationale: 'Failed to fetch score.' });
+    } finally {
+      setIsScoring(false);
+    }
   };
 
   const renderDynamicQuestions = () => {
@@ -279,6 +304,19 @@ function App() {
           <div>
             <h2>All Submitted Products</h2>
             <button onClick={() => setCurrentStep(0)} style={{ marginBottom: '20px' }}>Go to Home</button>
+            {isScoring && (
+              <div className="score-popup">
+                <h3>Generating Score...</h3>
+                <p>The AI is analyzing the data. This may take a moment.</p>
+              </div>
+            )}
+            {scoreData && (
+              <div className="score-popup">
+                <h3>Transparency Score: {scoreData.score} / 100</h3>
+                <p>{scoreData.rationale}</p>
+                <button onClick={() => setScoreData(null)}>Close</button>
+              </div>
+            )}
             {isLoadingProducts ? (
               <p>Loading products...</p>
             ) : errorFetchingProducts ? (
@@ -292,7 +330,12 @@ function App() {
                     <h3>{product.name}</h3>
                     <p>{product.description.substring(0, 100)}{product.description.length > 100 ? '...' : ''}</p>
                     <p style={{ fontSize: '0.8em', color: '#666' }}>Submitted: {new Date(product.created_at || '').toLocaleDateString()}</p>
-                    <button onClick={() => product.id && handleDownloadReport(product.id)}>Download Report</button>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                        <button onClick={() => product.id && handleDownloadReport(product.id)}>Download Report</button>
+                        <button onClick={() => product.id && handleGetScore(product.id)} disabled={isScoring}>
+                          {isScoring ? 'Scoring...' : 'Get Score'}
+                        </button>
+                    </div>
                   </div>
                 ))}
               </div>
