@@ -3,6 +3,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js'; // Import createClient
+import generateProductReport from './reportGenerator'; // Import the new module
+import { createReadStream, existsSync, unlinkSync, mkdirSync } from 'fs'; // For file system operations
+import path from 'path'; // For path manipulation
+
 
 dotenv.config();
 
@@ -12,6 +16,7 @@ const port = process.env.PORT || 5000;
 // Initialize Supabase client for the backend
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('Supabase URL or Service Key not found in environment variables.');
@@ -44,6 +49,12 @@ testSupabaseConnection(); // Call the test function
 
 app.use(cors());
 app.use(express.json());
+
+// Ensure a directory for reports exists
+const reportsDir = path.join(__dirname, '../reports'); // 'reports' folder at the root of backend
+if (!existsSync(reportsDir)) {
+    mkdirSync(reportsDir);
+}
 
 app.get('/', (req, res) => {
   res.send('Hello from the backend!');
@@ -88,6 +99,44 @@ app.post('/api/products', async (req, res) => {
   } catch (err: any) {
     console.error('Unexpected error adding product:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/products/:id/report', async (req, res) => {
+  const productId = req.params.id;
+
+  try {
+    // 1. Fetch product data from Supabase
+    const { data, error } = await supabase.from('products').select('*').eq('id', productId).single();
+
+    if (error || !data) {
+      console.error('Error fetching product for report:', error);
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+
+    // 2. Generate PDF report
+    const reportFileName = `transparency_report_${productId}.pdf`;
+    const filePath = path.join(reportsDir, reportFileName);
+
+    await generateProductReport(data, filePath); // Use the new report generator
+
+    // 3. Send the generated PDF file as a response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${reportFileName}"`);
+
+    const fileStream = createReadStream(filePath);
+    fileStream.pipe(res);
+
+    // Optional: Clean up the file after sending
+    fileStream.on('close', () => {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath); // Delete the temporary PDF
+      }
+    });
+
+  } catch (err: any) {
+    console.error('Error generating or serving report:', err.message);
+    res.status(500).json({ error: 'Failed to generate product report.' });
   }
 });
 
