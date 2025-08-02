@@ -1,5 +1,5 @@
 // frontend/src/App.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 // Define interfaces for better type safety
@@ -25,6 +25,35 @@ function App() {
   const [dynamicQuestions, setDynamicQuestions] = useState<Question[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [errorFetchingQuestions, setErrorFetchingQuestions] = useState<string | null>(null);
+  const [products, setProducts] = useState<ProductData[]>([]); // New state for product list
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [errorFetchingProducts, setErrorFetchingProducts] = useState<string | null>(null);
+  
+  // Function to fetch products for the list view
+  const fetchProducts = async () => {
+    setIsLoadingProducts(true);
+    setErrorFetchingProducts(null);
+    try {
+      const response = await fetch('http://localhost:5000/api/products');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: ProductData[] = await response.json();
+      setProducts(data);
+    } catch (error: any) {
+      console.error('Error fetching product list:', error);
+      setErrorFetchingProducts('Failed to load products. Please try again.');
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  // Call fetchProducts when entering the product list step
+  useEffect(() => {
+    if (currentStep === 4) { // Assuming '4' is our new product list step
+      fetchProducts();
+    }
+  }, [currentStep]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -102,13 +131,18 @@ function App() {
       // Reset form
       setProductData({ name: '', description: '' });
       setDynamicQuestions([]);
-      setCurrentStep(0); // Go back to landing page
+      setCurrentStep(4); // Go back to product list step
     } catch (error: any) {
       console.error('Error submitting product:', error.message);
       alert(`Error: ${error.message}`);
     }
   };
 
+  // New function to handle report download
+  const handleDownloadReport = (productId: string) => {
+    // This will trigger the download directly in the browser
+    window.open(`http://localhost:5000/api/products/${productId}/report`, '_blank');
+  };
   const renderDynamicQuestions = () => {
     if (isLoadingQuestions) {
       return <p>Loading dynamic questions...</p>;
@@ -168,6 +202,7 @@ function App() {
           <div>
             <h2>Welcome to the Product Transparency Platform</h2>
             <button onClick={() => setCurrentStep(1)}>Start New Submission</button>
+            <button onClick={() => setCurrentStep(4)} style={{ marginLeft: '10px' }}>View All Products</button>
           </div>
         );
       case 1: // Basic Info
@@ -229,6 +264,31 @@ function App() {
                     <button onClick={handleSubmit}>Submit Product</button>
                 </div>
             );
+            case 4: // Product List View
+        return (
+          <div>
+            <h2>All Submitted Products</h2>
+            <button onClick={() => setCurrentStep(0)} style={{ marginBottom: '20px' }}>Go to Home</button>
+            {isLoadingProducts ? (
+              <p>Loading products...</p>
+            ) : errorFetchingProducts ? (
+              <p style={{ color: 'red' }}>{errorFetchingProducts}</p>
+            ) : products.length === 0 ? (
+              <p>No products submitted yet. Start a new submission!</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                {products.map(product => (
+                  <div key={product.id} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <h3>{product.name}</h3>
+                    <p>{product.description.substring(0, 100)}{product.description.length > 100 ? '...' : ''}</p>
+                    <p style={{ fontSize: '0.8em', color: '#666' }}>Submitted: {new Date(product.created_at).toLocaleDateString()}</p>
+                    <button onClick={() => handleDownloadReport(product.id)}>Download Report</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       default:
         return (
           <div>

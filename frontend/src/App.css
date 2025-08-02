@@ -51,3 +51,43 @@ button {
 button:hover {
   background-color: #0056b3;
 }
+
+.product-card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    text-align: left;
+}
+
+.product-card h3 {
+    color: #007bff;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.product-card p {
+    font-size: 0.9em;
+    color: #333;
+    line-height: 1.5;
+}
+
+.product-card button {
+    margin-top: 15px;
+    width: 100%;
+}
+
+main > div {
+  display: flex; /* or block for single-column layouts */
+  flex-direction: column;
+  align-items: center; /* Center content in column layout */
+}
+
+/* Adjust for grid layout when products are displayed */
+main .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%; /* Ensure grid takes full width within main */
+}
