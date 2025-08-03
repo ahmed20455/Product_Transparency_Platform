@@ -8,7 +8,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = "AIzaSyC-LzB_w3xQY2niO245xLX9e63UiSEM3as"
+API_KEY = "your api key"
 MODEL_ID = "gemini-2.5-flash"
 
 def get_llm_questions(product_name, description):
