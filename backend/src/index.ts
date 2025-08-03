@@ -40,7 +40,12 @@ async function testSupabaseConnection() {
 
 testSupabaseConnection();
 
-app.use(cors());
+app.use(cors({
+  origin: ['https://product-transparency-platform.vercel.app'], // or use '*' if development testing
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true
+}));
 app.use(express.json());
 
 const reportsDir = path.join(__dirname, '../reports');
