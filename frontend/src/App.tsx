@@ -45,7 +45,6 @@ function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const token = localStorage.getItem('authToken');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,22 +59,28 @@ function App() {
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    setAuthError(null);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: authPassword,
-      });
+  e.preventDefault();
+  setIsLoggingIn(true);
+  setAuthError(null);
+  try {
+    const { data: { session }, error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
 
-      if (error) throw error;
-    } catch (error: any) {
-      setAuthError(error.message);
-    } finally {
-      setIsLoggingIn(false);
+    if (error) throw error;
+
+    if (session) {
+      const token = session.access_token;
+      localStorage.setItem('authToken', token);
     }
-  };
+  } catch (error: any) {
+    setAuthError(error.message);
+  } finally {
+    setIsLoggingIn(false);
+  }
+};
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -172,7 +177,9 @@ function App() {
             }, {} as { [key: string]: any })
       };
 
-      const response = await fetch(`${BACKEND_URL}/api/products`, {
+      const token = localStorage.getItem('authToken'); // ⬅️ Add this line before fetch
+
+const response = await fetch(`${BACKEND_URL}/api/products`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -180,6 +187,7 @@ function App() {
   },
   body: JSON.stringify(payload),
 });
+
 
 
 
