@@ -45,6 +45,7 @@ function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const token = localStorage.getItem('authToken');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -175,6 +176,7 @@ function App() {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
   },
   body: JSON.stringify(payload),
 });
