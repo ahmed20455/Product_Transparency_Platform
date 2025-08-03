@@ -259,22 +259,24 @@ app.get('/api/products/:id/transparency-score', async (req, res) => {
             questions: { text: string; type: string } | { text: string; type: string }[] | null;
         };
 
-        const q_and_a_data = (answersWithQuestions as AnswerWithQuestion[] | null)?.map(item => ({
-            question_text: Array.isArray(item.questions)
-                ? (item.questions.length > 0 ? item.questions[0]?.text : undefined)
-                : item.questions?.text,
-            answer_value: item.value
-        })) || [];
+const q_and_a_data = (answersWithQuestions as AnswerWithQuestion[] | null)?.map(item => ({
+    question_text: Array.isArray(item.questions)
+        ? (item.questions.length > 0 ? item.questions[0]?.text : undefined)
+        : item.questions?.text,
+    answer_value: item.value
+})) || [];
 
-        const aiResponse = await fetch('http://localhost:5001/transparency-score', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                product_name: product.name,
-                description: product.description,
-                questions_and_answers: q_and_a_data
-            })
-        });
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+
+const aiResponse = await fetch(`${AI_SERVICE_URL}/transparency-score`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        product_name: product.name,
+        description: product.description,
+        questions_and_answers: q_and_a_data
+    })
+});
 
         if (!aiResponse.ok) {
             throw new Error('AI service failed to provide a score.');
