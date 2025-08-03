@@ -20,7 +20,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false,
   }
@@ -28,7 +28,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 async function testSupabaseConnection() {
     try {
-        const { data, error } = await supabase.from('products').select('id').limit(1);
+        const { data, error } = await supabaseAdmin.from('products').select('id').limit(1);
         if (error) {
             throw error;
         }
@@ -57,7 +57,7 @@ const upsertQuestions = async (questions: any[]) => {
     }));
 
     try {
-        const { error } = await supabase.from('questions').upsert(questionsToUpsert);
+        const { error } = await supabaseAdmin.from('questions').upsert(questionsToUpsert);
         if (error) {
             console.error('Error upserting questions:', error);
             throw error;
@@ -68,34 +68,80 @@ const upsertQuestions = async (questions: any[]) => {
     }
 };
 
-app.get('/api/products', async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (error) {
-      throw error;
+const getAuthUser = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Authorization header is missing.' });
     }
-    res.json(data);
-  } catch (err: any) {
-    console.error('Error fetching products from Supabase:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: 'Token is missing.' });
+    }
+
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) {
+        return res.status(401).json({ error: 'Invalid or expired token.' });
+    }
+
+    (req as any).user = user;
+    (req as any).token = token;
+    next();
+};
+
+app.get('/api/products', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin.from('products').select('*').order('created_at', { ascending: false });
+        if (error) {
+            throw error;
+        }
+        res.json(data);
+    } catch (err: any) {
+        console.error('Error fetching products from Supabase:', err.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', getAuthUser, async (req, res) => {
     const { name, description, questions: dynamicQuestions, ...dynamicAnswers } = req.body;
-  
+    const user = (req as any).user;
+    const token = (req as any).token;
+
     if (!name || !description) {
       return res.status(400).json({ error: 'Product name and description are required.' });
     }
   
+    const supabaseForUser = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
+    supabaseForUser.auth.setSession({
+        access_token: token,
+        refresh_token: token
+    });
+  
     try {
+        const { data: companyData, error: companyError } = await supabaseForUser
+            .from('companies')
+            .select('id')
+            .eq('owner_id', user.id)
+            .single();
+
+        if (companyError || !companyData) {
+            console.error('Error finding company for user:', companyError);
+            return res.status(403).json({ error: 'User does not belong to a company.' });
+        }
+        const companyId = companyData.id;
+
         if (dynamicQuestions && dynamicQuestions.length > 0) {
             await upsertQuestions(dynamicQuestions);
         }
 
-        const { data: productData, error: productError } = await supabase
+        const { data: productData, error: productError } = await supabaseForUser
             .from('products')
-            .insert({ name, description })
+            .insert({ name, description, company_id: companyId }) // <-- This is the crucial fix
             .select();
   
         if (productError || !productData || productData.length === 0) {
@@ -112,7 +158,7 @@ app.post('/api/products', async (req, res) => {
                 value: String(dynamicAnswers[questionId]),
             }));
 
-            const { error: answersError } = await supabase
+            const { error: answersError } = await supabaseForUser
                 .from('answers')
                 .insert(answersToInsert);
 
@@ -128,64 +174,65 @@ app.post('/api/products', async (req, res) => {
     }
 });
 
+
 app.get('/api/products/:id/report', async (req, res) => {
-  const productId = req.params.id;
-
-  try {
-    const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .single();
-
-    if (productError || !product) {
-        console.error('Error fetching product for report:', productError);
-        return res.status(404).json({ error: 'Product not found.' });
-    }
-
-    const { data: answersWithQuestions, error: answersError } = await supabase
-        .from('answers')
-        .select(`
-            value,
-            questions (id, text, type, options)
-        `)
-        .eq('product_id', productId);
-
-    if (answersError) {
-        console.error('Error fetching answers for report:', answersError);
-        return res.status(500).json({ error: 'Failed to fetch answers for report.' });
-    }
-
-    const reportFileName = `transparency_report_${productId}.pdf`;
-    const filePath = path.join(reportsDir, reportFileName);
-
-    await generateProductReport(product, answersWithQuestions, filePath);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${reportFileName}"`);
-
-    const fileStream = createReadStream(filePath);
-    fileStream.pipe(res);
-
-    fileStream.on('close', () => {
-      if (existsSync(filePath)) {
-        unlinkSync(filePath);
-      }
-    });
-
-  } catch (err: any) {
-    console.error('Error generating or serving report:', err.message);
-    res.status(500).json({ error: 'Failed to generate product report.' });
-  }
-});
-
-
-// NEW: Endpoint to get a transparency score for a product
-app.get('/api/products/:id/score', async (req, res) => {
     const productId = req.params.id;
 
     try {
-        const { data: product, error: productError } = await supabase
+        const { data: product, error: productError } = await supabaseAdmin
+            .from('products')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (productError || !product) {
+            console.error('Error fetching product for report:', productError);
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        const { data: answersWithQuestions, error: answersError } = await supabaseAdmin
+            .from('answers')
+            .select(`
+                value,
+                questions (id, text, type, options)
+            `)
+            .eq('product_id', productId);
+
+        if (answersError) {
+            console.error('Error fetching answers for report:', answersError);
+            return res.status(500).json({ error: 'Failed to fetch answers for report.' });
+        }
+
+        const reportFileName = `transparency_report_${productId}.pdf`;
+        const filePath = path.join(reportsDir, reportFileName);
+
+        await generateProductReport(product, answersWithQuestions, filePath);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${reportFileName}"`);
+
+        const fileStream = createReadStream(filePath);
+        fileStream.pipe(res);
+
+        fileStream.on('close', () => {
+          if (existsSync(filePath)) {
+            unlinkSync(filePath);
+          }
+        });
+
+    } catch (err: any) {
+        console.error('Error generating or serving report:', err.message);
+        res.status(500).json({ error: 'Failed to generate product report.' });
+        return;
+    }
+});
+
+
+app.get('/api/products/:id/transparency-score', async (req, res) => {
+    const productId = req.params.id;
+
+    try {
+        const { data: product, error: productError } = await supabaseAdmin
             .from('products')
             .select('*')
             .eq('id', productId)
@@ -195,7 +242,7 @@ app.get('/api/products/:id/score', async (req, res) => {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        const { data: answersWithQuestions, error: answersError } = await supabase
+        const { data: answersWithQuestions, error: answersError } = await supabaseAdmin
             .from('answers')
             .select(`
                 value,
@@ -206,14 +253,19 @@ app.get('/api/products/:id/score', async (req, res) => {
         if (answersError) {
             return res.status(500).json({ error: 'Failed to fetch answers for scoring.' });
         }
-        
-        // Prepare data for the AI service call
-        const q_and_a_data = answersWithQuestions?.map(item => ({
-            question_text: item.questions?.[0]?.text,
+
+        type AnswerWithQuestion = {
+            value: string;
+            questions: { text: string; type: string } | { text: string; type: string }[] | null;
+        };
+
+        const q_and_a_data = (answersWithQuestions as AnswerWithQuestion[] | null)?.map(item => ({
+            question_text: Array.isArray(item.questions)
+                ? (item.questions.length > 0 ? item.questions[0]?.text : undefined)
+                : item.questions?.text,
             answer_value: item.value
         })) || [];
 
-        // Call the AI service
         const aiResponse = await fetch('http://localhost:5001/transparency-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

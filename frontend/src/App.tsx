@@ -1,6 +1,7 @@
 // frontend/src/App.tsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { supabase } from './supabaseClient';
 
 interface Question {
   id: string;
@@ -34,33 +35,71 @@ function App() {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [errorFetchingProducts, setErrorFetchingProducts] = useState<string | null>(null);
-  const [scoreData, setScoreData] = useState<ScoreData | null>(null); // New state for score
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   const [isScoring, setIsScoring] = useState(false);
 
+  const [session, setSession] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      setAuthError(error.message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const fetchProducts = async () => {
     setIsLoadingProducts(true);
     setErrorFetchingProducts(null);
     try {
-      const response = await fetch('http://localhost:5000/api/products');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (error) {
+        throw error;
       }
-      const data: ProductData[] = await response.json();
-      setProducts(data);
+      setProducts(data as ProductData[]);
     } catch (error: any) {
       console.error('Error fetching product list:', error);
-      setErrorFetchingProducts('Failed to load products. Please try again.');
+      setErrorFetchingProducts(error.message || 'Failed to load products.');
     } finally {
       setIsLoadingProducts(false);
     }
   };
 
   useEffect(() => {
-    if (currentStep === 4) {
+    if (currentStep === 4 && session) {
       fetchProducts();
     }
-  }, [currentStep]);
+  }, [currentStep, session]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -127,13 +166,14 @@ function App() {
             .reduce((obj: { [key: string]: any }, key) => {
                 obj[key] = productData[key];
                 return obj;
-            }, {})
+            }, {} as { [key: string]: any })
       };
 
       const response = await fetch('http://localhost:5000/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -163,7 +203,7 @@ function App() {
     setIsScoring(true);
     setScoreData(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productId}/score`);
+      const response = await fetch(`http://localhost:5000/api/products/${productId}/transparency-score`);
       if (!response.ok) {
         throw new Error('Could not fetch score from backend.');
       }
@@ -175,6 +215,40 @@ function App() {
     } finally {
       setIsScoring(false);
     }
+  };
+
+  const renderAuthForm = () => {
+    return (
+      <div className="auth-container">
+        <h2>Login or Sign Up</h2>
+        <form onSubmit={handleLogin} className="auth-form">
+          <label htmlFor="email">Email:</label>
+          <input
+            type="email"
+            id="email"
+            value={authEmail}
+            onChange={(e) => setAuthEmail(e.target.value)}
+            required
+          />
+          <label htmlFor="password">Password:</label>
+          <input
+            type="password"
+            id="password"
+            value={authPassword}
+            onChange={(e) => setAuthPassword(e.target.value)}
+            required
+          />
+          {authError && <p className="auth-error">{authError}</p>}
+          <button type="submit" disabled={isLoggingIn}>
+            {isLoggingIn ? 'Loading...' : 'Login'}
+          </button>
+        </form>
+        <p>
+            You can also register with your email and password
+            <br/>by entering them and clicking Login.
+        </p>
+      </div>
+    );
   };
 
   const renderDynamicQuestions = () => {
@@ -230,6 +304,10 @@ function App() {
   };
 
   const renderStep = () => {
+    if (!session) {
+      return renderAuthForm();
+    }
+    
     switch (currentStep) {
       case 0:
         return (
@@ -356,6 +434,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Product Transparency Platform</h1>
+        {session && <button onClick={handleLogout} className="logout-button">Logout</button>}
       </header>
       <main>
         {renderStep()}
