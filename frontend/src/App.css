@@ -1,3 +1,47 @@
+/* Define color variables for light and dark themes */
+:root {
+  --background: #f9f9f9;
+  --foreground: #222;
+  --primary: #007bff;
+  --secondary: #ffe600;
+  --card-bg: #fff;
+  --border: #ccc;
+  --button-bg: #ffe600;
+  --button-hover: #0056b3;
+  --popup-bg: #fff;
+  --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --popup-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --input-bg: #fff;
+  --input-border: #ccc;
+  --auth-bg: #f9f9f9;
+  --logout-bg: #f44336;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #181a1b;
+    --foreground: #f3f3f3;
+    --primary: #4da3ff;
+    --secondary: #ffe600;
+    --card-bg: #23272a;
+    --border: #333;
+    --button-bg: #ffe600;
+    --button-hover: #4da3ff;
+    --popup-bg: #23272a;
+    --shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    --popup-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+    --input-bg: #23272a;
+    --input-border: #444;
+    --auth-bg: #23272a;
+    --logout-bg: #f44336;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -7,6 +51,7 @@
 
 .App {
   font-family: Arial, sans-serif;
+  color: var(--foreground);
 }
 
 .App-header {
@@ -14,10 +59,10 @@
 }
 
 main {
-  background-color: #f9f9f9;
+  background-color: var(--background);
   padding: 2em;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -27,105 +72,77 @@ label {
   margin-bottom: 0.5em;
   font-weight: bold;
   text-align: left;
+  color: var(--foreground);
 }
 
 input[type="text"],
 textarea {
-  width: calc(100% - 20px); /* Account for padding */
+  width: calc(100% - 20px);
   padding: 10px;
   margin-bottom: 1em;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--foreground);
 }
 
 button {
-  background-color: #007bff;
-  color: white;
+  background-color: var(--button-bg);
+  color: var(--foreground);
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   margin: 0.5em;
+  transition: background 0.2s;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: var(--button-hover);
+  color: #fff;
 }
 
 .product-card {
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 8px;
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    text-align: left;
+  border: 1px solid var(--border);
+  padding: 15px;
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card h3 {
-    color: #007bff;
-    margin-top: 0;
-    margin-bottom: 10px;
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: 10px;
 }
 
 .product-card p {
-    font-size: 0.9em;
-    color: #333;
-    line-height: 1.5;
+  font-size: 0.9em;
+  color: var(--foreground);
+  line-height: 1.5;
+  flex-grow: 1;
 }
 
 .product-card button {
-    margin-top: 15px;
-    width: 100%;
+  margin-top: 15px;
+  width: 100%;
 }
 
 main > div {
-  display: flex; /* or block for single-column layouts */
+  display: flex;
   flex-direction: column;
-  align-items: center; /* Center content in column layout */
+  align-items: center;
 }
 
-/* Adjust for grid layout when products are displayed */
-main .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-    width: 100%; /* Ensure grid takes full width within main */
-}
-
+main .product-grid,
 .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-    width: 100%;
-}
-
-.product-card {
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 8px;
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    text-align: left;
-    display: flex;
-    flex-direction: column;
-}
-
-.product-card h3 {
-    color: #007bff;
-    margin-top: 0;
-    margin-bottom: 10px;
-}
-
-.product-card p {
-    font-size: 0.9em;
-    color: #333;
-    line-height: 1.5;
-    flex-grow: 1; /* Allows the description to fill space */
-}
-
-.product-card button {
-    margin-top: 15px;
-    width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  width: 100%;
 }
 
 .score-popup {
@@ -135,73 +152,78 @@ main .product-grid {
   transform: translate(-50%, -50%);
   width: 90%;
   max-width: 500px;
-  background-color: white;
+  background-color: var(--popup-bg);
   padding: 2em;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--popup-shadow);
   z-index: 100;
   text-align: left;
+  color: var(--foreground);
 }
 
 .score-popup h3 {
   margin-top: 0;
-  color: #007bff;
+  color: var(--primary);
 }
 
 .score-popup button {
   float: right;
   background-color: #f4f4f4;
-  color: #333;
-  border: 1px solid #ccc;
+  color: var(--foreground);
+  border: 1px solid var(--border);
 }
+
 .auth-container {
-    max-width: 400px;
-    margin: 4em auto;
-    padding: 2em;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  margin: 4em auto;
+  padding: 2em;
+  background-color: var(--auth-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
 }
 
 .auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
 }
 
 .auth-form label {
-    text-align: left;
-    font-weight: bold;
+  text-align: left;
+  font-weight: bold;
+  color: var(--foreground);
 }
 
 .auth-form input {
-    padding: 0.75em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+  padding: 0.75em;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--foreground);
 }
 
 .auth-form button {
-    background-color: #007bff;
-    color: white;
-    padding: 1em;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+  background-color: var(--primary);
+  color: #fff;
+  padding: 1em;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .auth-error {
-    color: red;
-    text-align: center;
+  color: red;
+  text-align: center;
 }
 
 .logout-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: var(--logout-bg);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
 }
