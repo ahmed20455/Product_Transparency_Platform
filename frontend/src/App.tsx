@@ -23,6 +23,8 @@ interface ScoreData {
   rationale: string;
 }
 
+const BACKEND_URL = "https://product-transparency-backend.onrender.com";
+
 function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [productData, setProductData] = useState<ProductData>({
@@ -169,14 +171,15 @@ function App() {
             }, {} as { [key: string]: any })
       };
 
-      const response = await fetch('http://localhost:5000/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(`${BACKEND_URL}/api/products`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(payload),
+});
+
+
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -196,14 +199,15 @@ function App() {
   };
 
   const handleDownloadReport = (productId: string) => {
-    window.open(`http://localhost:5000/api/products/${productId}/report`, '_blank');
+    window.open(`${BACKEND_URL}/api/products/${productId}/report`, '_blank');
+
   };
 
   const handleGetScore = async (productId: string) => {
     setIsScoring(true);
     setScoreData(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productId}/transparency-score`);
+      const response = await fetch(`${BACKEND_URL}/api/products/${productId}/transparency-score`);
       if (!response.ok) {
         throw new Error('Could not fetch score from backend.');
       }
