@@ -172,7 +172,7 @@ Request Body:
 
 **Sample Product + Generated Report**
 
-- [Sample Report](https://github.com/ahmed20455/Product_Transparency_Platform/blob/main/Screenshot%20(467).png)
+- [Sample Report](Screenshot(467).png)
 
 - To demonstrate:
 
