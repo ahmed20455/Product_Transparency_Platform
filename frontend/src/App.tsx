@@ -373,7 +373,7 @@ const response = await fetch(`${BACKEND_URL}/api/products`, {
           <div>
             <h2>Add Product - Step 3/3: Review & Submit</h2>
             <p>Please review the collected product information before final submission.</p>
-            <div style={{ textAlign: 'left', border: '1px solid #eee', padding: '1em', borderRadius: '5px', backgroundColor: '#fff', marginBottom: '1em' }}>
+            <div style={{ textAlign: 'left', border: '1px solid #eee', padding: '1em', borderRadius: '5px', backgroundColor: 'blue', marginBottom: '1em' }}>
                 <h3>Product Summary:</h3>
                 {Object.entries(productData).map(([key, value]) => (
                     <p key={key}>
