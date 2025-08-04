@@ -1,7 +1,7 @@
 # Product Transparency Platform
 
+## [Deployed Link](https://product-transparency-platform.vercel.app/)
 ## [Watch the demo](https://www.youtube.com/watch?v=DiZjf0zBhok)
-- Video Link - https://www.youtube.com/watch?v=DiZjf0zBhok
 ## App Screenshots  
 ![Login page](https://github.com/ahmed20455/Product_Transparency_Platform/blob/d9164373ad6eceb2a6dbbb494dbb56d4883f3953/Screenshot%20(466).png)
 ![Sample Report](https://github.com/ahmed20455/Product_Transparency_Platform/blob/d9164373ad6eceb2a6dbbb494dbb56d4883f3953/Screenshot%20(467).png)
