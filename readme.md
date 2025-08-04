@@ -4,6 +4,9 @@
 - Video Link - https://www.youtube.com/watch?v=DiZjf0zBhok
 ## App Screenshots  
 ![Login page](https://github.com/ahmed20455/Product_Transparency_Platform/blob/d9164373ad6eceb2a6dbbb494dbb56d4883f3953/Screenshot%20(466).png)
+![Sample Report](https://github.com/ahmed20455/Product_Transparency_Platform/blob/d9164373ad6eceb2a6dbbb494dbb56d4883f3953/Screenshot%20(467).png)
+![Landing page](https://github.com/ahmed20455/Product_Transparency_Platform/blob/7855b25fefe0b5d3f3070613e8fd0c12d85ce086/Screenshot%20(469).png)
+![Transparency Score](https://github.com/ahmed20455/Product_Transparency_Platform/blob/7855b25fefe0b5d3f3070613e8fd0c12d85ce086/Screenshot%20(470).png)
 ## Objective
 - This project is a full-stack web application designed to collect detailed information about products through dynamic follow-up questions, store the collected data in a normalized database, and generate comprehensive Product Transparency Reports in PDF format. The platform aims to be clean, intelligent, and user-friendly.
 
