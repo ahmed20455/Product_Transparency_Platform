@@ -1,112 +1,112 @@
-Product Transparency Platform
-Objective
-This project is a full-stack web application designed to collect detailed information about products through dynamic follow-up questions, store the collected data in a normalized database, and generate comprehensive Product Transparency Reports in PDF format. The platform aims to be clean, intelligent, and user-friendly.
+# Product Transparency Platform
 
-Project Structure
-The application is organized into distinct services to promote modularity and collaboration:
+## [Watch the demo](https://www.youtube.com/watch?v=DiZjf0zBhok)
+- Video Link - https://www.youtube.com/watch?v=DiZjf0zBhok
 
-/frontend: The React + TypeScript application for the user interface.
+## Objective
+- This project is a full-stack web application designed to collect detailed information about products through dynamic follow-up questions, store the collected data in a normalized database, and generate comprehensive Product Transparency Reports in PDF format. The platform aims to be clean, intelligent, and user-friendly.
 
-/backend: The Node.js (Express) server handling API requests, data storage, and PDF generation.
+## Project Structure
+- The application is organized into distinct services to promote modularity and collaboration:
 
-/ai-service: A Flask application providing AI capabilities for dynamic question generation via an LLM.
+- /frontend: The React + TypeScript application for the user interface.
 
-/design: Contains UI/UX design assets (Figma files).
+- /backend: The Node.js (Express) server handling API requests, data storage, and PDF generation.
 
-Tech Stack
-Frontend: React + TypeScript
+- /ai-service: A Flask application providing AI capabilities for dynamic question generation via an LLM.
 
-Backend: Node.js (Express)
+- /design: Contains UI/UX design assets (Figma files).
 
-Database: PostgreSQL (managed by Supabase)
+## Tech Stack
+- Frontend: React + TypeScript
 
-AI/ML: Python (Flask) with the Gemini API for LLM-based logic
+- Backend: Node.js (Express)
 
-PDF Generation: pdfkit library
+- Database: PostgreSQL (managed by Supabase)
 
-Features Implemented
-Multi-step Product Data Collection Form: An intuitive form with conditional logic to guide users through data input.
+- AI/ML: Python (Flask) with the Gemini API for LLM-based logic
 
-Dynamic Follow-Up Questions (LLM-powered): Uses the Gemini API to generate relevant and specific follow-up questions based on initial product details.
+- PDF Generation: pdfkit library
 
-Normalized Product Data Storage: The application correctly uses a three-table schema (products, questions, answers) with foreign key relations to store all collected information, fulfilling a key requirement of the assignment.
+## Features Implemented
+- Multi-step Product Data Collection Form: An intuitive form with conditional logic to guide users through data input.
 
-Product Data Review Screen: A dedicated step in the form to review all entered data before final submission.
+- Dynamic Follow-Up Questions (LLM-powered): Uses the Gemini API to generate relevant and specific follow-up questions based on initial product details.
 
-PDF Report Generation: A backend module generates detailed Product Transparency Reports in PDF format from the structured data.
+- Normalized Product Data Storage: The application correctly uses a three-table schema (products, questions, answers) with foreign key relations to store all collected information, fulfilling a key requirement of the assignment.
 
-Product Listing & Report Download: A dedicated page to view all submitted products and download their corresponding transparency reports.
+- Product Data Review Screen: A dedicated step in the form to review all entered data before final submission.
 
-Clean and Functional UI: Designed for an intuitive and trustworthy user experience.
+- PDF Report Generation: A backend module generates detailed Product Transparency Reports in PDF format from the structured data.
 
-Setup Steps
-Prerequisites:
+- Product Listing & Report Download: A dedicated page to view all submitted products and download their corresponding transparency reports.
 
-Node.js (v18+) and npm (or yarn)
+- Clean and Functional UI: Designed for an intuitive and trustworthy user experience.
 
-Python (v3.8+) and pip
+## Setup Steps
+### Prerequisites:
 
-Git
+- Node.js (v18+) and npm (or yarn)
 
-A Supabase account and project.
+- Python (v3.8+) and pip
 
-1. Clone the repository:
+- Git
 
-git clone <YOUR_REPO_URL>
+- A Supabase account and project.
+
+1. **Clone the repository**:
+ ```bash
+git clone https://github.com/ahmed20455/Product_Transparency_Platform
 cd product-transparency-app
+```
+2. **Supabase Setup**:
 
-2. Supabase Setup:
+- Go to Supabase.com and create a new project.
 
-Go to Supabase.com and create a new project.
+- In your Supabase project, go to "Table Editor" and create the following tables:
 
-In your Supabase project, go to "Table Editor" and create the following tables:
+- **products**:
 
-products:
+1. id (uuid, Primary Key, Default: gen_random_uuid())
 
-id (uuid, Primary Key, Default: gen_random_uuid())
+2. name (text, Not Null)
 
-name (text, Not Null)
+3. description (text)
 
-description (text)
 
-created_at (timestamptz, Default: now())
 
-questions:
+- **questions**:
 
-id (text, Primary Key)
+1. id (text, Primary Key)
 
-text (text, Not Null)
+2. text (text, Not Null)
 
-type (text, Not Null)
+3. type (text, Not Null)
 
-options (text[], Nullable)
+4. options (text[], Nullable)
 
-created_at (timestamptz, Default: now())
+- **answers**:
 
-answers:
+1. id (uuid, Primary Key, Default: gen_random_uuid())
 
-id (uuid, Primary Key, Default: gen_random_uuid())
+2. product_id (uuid, Not Null)
 
-product_id (uuid, Not Null)
+3. question_id (text, Not Null)
 
-question_id (text, Not Null)
+4. value (text)
 
-value (text)
+- Add Foreign Key Relations on the answers table:
 
-created_at (timestamptz, Default: now())
+- product_id references products.id.
 
-Add Foreign Key Relations on the answers table:
+- question_id references questions.id.
 
-product_id references products.id.
+- **IMPORTANT: Ensure Row Level Security (RLS) is DISABLED for all three tables for this project's setup.**
 
-question_id references questions.id.
+- Navigate to "Project Settings" > "API" to find your Project URL and service_role (secret) key.
 
-IMPORTANT: Ensure Row Level Security (RLS) is DISABLED for all three tables for this project's setup.
-
-Navigate to "Project Settings" > "API" to find your Project URL and service_role (secret) key.
-
-3. Backend Setup:
-
+3. **Backend Setup**:
+```
 cd backend
 npm install
 # Create a .env file with your Supabase credentials
@@ -121,9 +121,10 @@ SUPABASE_SERVICE_KEY="[YOUR_SUPABASE_SERVICE_ROLE_KEY]"
 npm run dev
 
 The backend server will run on http://localhost:5000.
+```
 
-4. AI Service Setup:
-
+4. **AI Service Setup**:
+```
 cd ../ai-service
 python -m venv venv
 # On Windows: .\venv\Scripts\activate
@@ -131,23 +132,23 @@ python -m venv venv
 pip install Flask Flask-Cors requests
 # Run the AI service
 python app.py
+```
+- The AI service will run on http://localhost:5001.
 
-The AI service will run on http://localhost:5001.
-
-5. Frontend Setup:
-
+5. **Frontend Setup**:
+```
 cd ../frontend
 npm install
 # Run the frontend application
 npm run dev
+```
+- The frontend application will run on http://localhost:5173.
 
-The frontend application will run on http://localhost:5173.
+**AI API Documentation**
+- The AI service exposes the following primary endpoint:
 
-AI API Documentation
-The AI service exposes the following primary endpoint:
-
-POST /generate-questions
-Description: Generates a list of dynamic follow-up questions using the Gemini API based on the provided product name and description.
+- **POST /generate-questions**
+- Description: Generates a list of dynamic follow-up questions using the Gemini API based on the provided product name and description.
 
 Request Body:
 
@@ -156,8 +157,8 @@ Request Body:
     "description": "string"
 }
 
-Response: A JSON array of question objects.
-
+- Response: A JSON array of question objects.
+```
 [
     {
         "id": "string",       // Unique identifier for the question
@@ -166,26 +167,26 @@ Response: A JSON array of question objects.
         "options"?: ["string"] // Optional: for 'boolean' type (e.g., ["Yes", "No"])
     }
 ]
+```
+- Example: Providing "Eco-Friendly Water Bottle" and "A reusable bottle made from bamboo and recycled plastic" will generate specific questions about those materials and sustainability efforts.
 
-Example: Providing "Eco-Friendly Water Bottle" and "A reusable bottle made from bamboo and recycled plastic" will generate specific questions about those materials and sustainability efforts.
+**Sample Product + Generated Report**
+- To demonstrate:
 
-Sample Product + Generated Report
-To demonstrate:
+- Go to http://localhost:5173.
 
-Go to http://localhost:5173.
+- Click "Start New Submission".
 
-Click "Start New Submission".
+- For "Product Name", enter Eco-Friendly Water Bottle. For "Product Description", enter A reusable water bottle made from recycled materials.
 
-For "Product Name", enter Eco-Friendly Water Bottle. For "Product Description", enter A reusable water bottle made from recycled materials.
+- Click "Next".
 
-Click "Next".
+- Answer the dynamic questions generated (e.g., "What material is the bottle made from?", "Is the entire bottle (including cap) recyclable?").
 
-Answer the dynamic questions generated (e.g., "What material is the bottle made from?", "Is the entire bottle (including cap) recyclable?").
+- Click "Next" to review the summary.
 
-Click "Next" to review the summary.
+- Click "Submit Product".
 
-Click "Submit Product".
+- You will be redirected to the "All Submitted Products" page. Find "Eco-Friendly Water Bottle" in the list.
 
-You will be redirected to the "All Submitted Products" page. Find "Eco-Friendly Water Bottle" in the list.
-
-Click "Download Report" next to it. A PDF report will be downloaded, containing all the entered information, including answers to the dynamic questions.
+- Click "Download Report" next to it. A PDF report will be downloaded, containing all the entered information, including answers to the dynamic questions.
