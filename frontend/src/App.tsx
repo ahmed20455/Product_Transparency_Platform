@@ -127,7 +127,7 @@ function App() {
       setIsLoadingQuestions(true);
       setErrorFetchingQuestions(null);
       try {
-        const response = await fetch('http://localhost:5001/generate-questions', {
+        const response = await fetch('https://product-transparency-ai.onrender.com/generate-questions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
