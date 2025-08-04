@@ -169,7 +169,7 @@ main .product-grid,
 .score-popup button {
   float: right;
   background-color: #f4f4f4;
-  color: var(--foreground);
+  color: blue;
   border: 1px solid var(--border);
 }
 
