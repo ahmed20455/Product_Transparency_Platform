@@ -257,10 +257,7 @@ const response = await fetch(`${BACKEND_URL}/api/products`, {
             {isLoggingIn ? 'Loading...' : 'Login'}
           </button>
         </form>
-        <p>
-            You can also register with your email and password
-            <br/>by entering them and clicking Login.
-        </p>
+        
       </div>
     );
   };
