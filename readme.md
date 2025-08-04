@@ -171,6 +171,9 @@ Request Body:
 - Example: Providing "Eco-Friendly Water Bottle" and "A reusable bottle made from bamboo and recycled plastic" will generate specific questions about those materials and sustainability efforts.
 
 **Sample Product + Generated Report**
+
+- [Sample Report](./screenshot(467).png)
+
 - To demonstrate:
 
 - Go to http://localhost:5173.
