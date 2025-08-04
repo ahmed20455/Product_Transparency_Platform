@@ -93,9 +93,29 @@ const getAuthUser = async (req: express.Request, res: express.Response, next: ex
     next();
 };
 
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', getAuthUser, async (req, res) => {
     try {
-        const { data, error } = await supabaseAdmin.from('products').select('*').order('created_at', { ascending: false });
+        // You should use the user's token here instead of the admin key to enforce RLS
+        const user = (req as any).user;
+        const token = (req as any).token;
+        const supabaseForUser = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+        supabaseForUser.auth.setSession({
+            access_token: token,
+            refresh_token: token
+        });
+
+        // Now fetch products based on the authenticated user's permissions
+        const { data, error } = await supabaseForUser
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+
         if (error) {
             throw error;
         }
